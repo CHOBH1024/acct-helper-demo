@@ -65,40 +65,6 @@ function findIssues() {
   return out;
 }
 
-/* ---------- 그림 ---------- */
-// 월별 막대(올해) + 선(작년)
-function chartMonthly(a, b, opts) {
-  opts = opts || {};
-  const W = 1100, H = opts.h || 260, L = 56, R = 12, T = 14, B = 26;
-  const max = Math.max(1, ...a, ...b) * 1.08;
-  const step = Math.pow(10, Math.floor(Math.log10(max))), nice = Math.ceil(max / step) * step;
-  const x = i => L + (W - L - R) / 12 * (i + 0.5), y = v => T + (H - T - B) * (1 - v / nice), bw = (W - L - R) / 12 * 0.56;
-  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="월별 지출">';
-  for (let k = 0; k <= 4; k++) { const v = nice / 4 * k; s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#e6ecea"/><text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + man(v) + '</text>'; }
-  a.forEach((v, i) => { if (opts.upto && i >= opts.upto) return; s += '<rect x="' + (x(i) - bw / 2) + '" y="' + y(v) + '" width="' + bw + '" height="' + (H - B - y(v)) + '" rx="3" fill="' + (i === (opts.upto || 12) - 1 ? '#5fa79b' : '#0e6b5f') + '"><title>' + (i + 1) + '월 ' + won(v) + '원</title></rect>'; });
-  if (b) { s += '<polyline fill="none" stroke="#e0a020" stroke-width="2.2" points="' + b.map((v, i) => x(i) + ',' + y(v)).join(' ') + '"/>'; b.forEach((v, i) => { s += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="3" fill="#fff" stroke="#e0a020" stroke-width="2"><title>작년 ' + (i + 1) + '월 ' + won(v) + '원</title></circle>'; }); }
-  for (let i = 0; i < 12; i++) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + (i + 1) + '월</text>';
-  return '<div class="chart">' + s + '</svg></div>';
-}
-// 누적 집행 곡선(예산 대비)
-function chartCumul(a, annual) {
-  const W = 1100, H = 240, L = 56, R = 12, T = 12, B = 26;
-  let c = 0; const cum = a.map(v => c += v);
-  const nice = Math.max(annual, cum[9] || 0) * 1.08;
-  const x = i => L + (W - L - R) / 11 * i, y = v => T + (H - T - B) * (1 - v / nice);
-  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="누적 집행">';
-  [0, 0.5, 1].forEach(k => { s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(annual * k) + '" y2="' + y(annual * k) + '" stroke="' + (k === 1 ? '#b93a12' : '#e6ecea') + '"' + (k === 1 ? ' stroke-dasharray="5 4"' : '') + '/><text x="' + (L - 6) + '" y="' + (y(annual * k) + 4) + '" text-anchor="end">' + man(annual * k) + '</text>'; });
-  s += '<line x1="' + x(0) + '" y1="' + y(annual / 12) + '" x2="' + x(11) + '" y2="' + y(annual) + '" stroke="#9fb3ae" stroke-dasharray="3 4"/>';
-  const n = 10, pts = cum.slice(0, n).map((v, i) => x(i) + ',' + y(v));
-  s += '<polygon fill="#0e6b5f22" points="' + x(0) + ',' + y(0) + ' ' + pts.join(' ') + ' ' + x(n - 1) + ',' + y(0) + '"/><polyline fill="none" stroke="#0e6b5f" stroke-width="2.4" points="' + pts.join(' ') + '"/>';
-  const fc = cum[n - 1] / ELAPSED;
-  s += '<line x1="' + x(n - 1) + '" y1="' + y(cum[n - 1]) + '" x2="' + x(11) + '" y2="' + y(fc) + '" stroke="#0e6b5f" stroke-width="2" stroke-dasharray="6 4"/><circle cx="' + x(11) + '" cy="' + y(fc) + '" r="4" fill="' + (fc > annual ? '#b93a12' : '#0e6b5f') + '"/><text x="' + (x(11) - 6) + '" y="' + (y(fc) - 8) + '" text-anchor="end">연말 예상 ' + man(fc) + '</text>';
-  s += '<circle cx="' + x(n - 1) + '" cy="' + y(cum[n - 1]) + '" r="4.5" fill="#0e6b5f"/>';
-  for (let i = 0; i < 12; i++) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + (i + 1) + '월</text>';
-  return '<div class="chart">' + s + '</svg></div>';
-}
-function bar(rate, pace) { const c = rate > 1 ? 'r' : rate > (pace || 2) + 0.08 ? 'w' : ''; return '<div class="bar"><i class="' + c + '" style="width:' + Math.min(100, rate * 100).toFixed(1) + '%"></i>' + (pace ? '<em style="left:' + (pace * 100).toFixed(1) + '%"></em>' : '') + '</div>'; }
-function kp(label, val, sub, c, unit, id) { return '<div class="kp ' + (c || '') + '"' + (id ? ' id="' + id + '"' : '') + '><span>' + label + '</span><b>' + val + '<small>' + (unit == null ? '원' : unit) + '</small></b><em>' + (sub || '') + '</em></div>'; }
 
 /* ---------- 팝업·알림·파일 ---------- */
 function modal(html, wide) {
@@ -113,7 +79,7 @@ function toast(msg) { $$('.toast').forEach(x => x.remove()); const t = document.
 const FRAMED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 function download(name, text, type) {
   if (FRAMED) {
-    modal('<h2>' + esc(name) + '</h2><p class="mut">이 화면에서는 파일 저장이 막혀 있어 내용을 보여 드립니다. 복사해서 붙여 넣으세요.</p><textarea readonly rows="14" style="width:100%;font:12px Consolas,monospace">' + esc(text) + '</textarea><div class="row end" style="margin-top:10px"><button class="btn p" data-a="close">닫기</button></div>', 760);
+    modal('<h2>' + esc(name) + '</h2><p class="mut">이 화면에서는 파일 저장이 막혀 있어 내용을 보여 드려요. 복사해서 붙여 넣으세요.</p><textarea readonly rows="14" style="width:100%;font:12px Consolas,monospace">' + esc(text) + '</textarea><div class="row end" style="margin-top:10px"><button class="btn p" data-a="close">닫기</button></div>', 760);
     return;
   }
   const b = new Blob(['﻿' + text], { type: type || 'text/csv;charset=utf-8' });
@@ -136,7 +102,7 @@ function parseCSV(t) {
 }
 function loadXLSX() {
   if (window.XLSX) return Promise.resolve();
-  return new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => no(new Error('엑셀 읽기 도구를 불러오지 못했습니다. CSV로 저장해서 올려 주세요.')); document.head.appendChild(s); });
+  return new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => no(new Error('엑셀 읽기 도구를 불러오지 못했어요. CSV로 저장해서 올려 주세요.')); document.head.appendChild(s); });
 }
 async function readTable(file) {
   const name = file.name.toLowerCase();
